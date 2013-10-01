@@ -1,11 +1,14 @@
 package ut.distcomp.application;
 
+import com.google.gson.Gson;
+
 public class ApplicationMessage {
 	
 	public enum MessageTypes {
-		ADD("Add"),DELETE("Delete"),EDIT("Edit"),ELECT("NewLeader"),VOTE("Vote"),COMMIT("Commit"),ABORT("Abort");
+		ADD("Add"),DELETE("Delete"),EDIT("Edit"),ELECT("NewLeader"),VOTE("Vote"),COMMIT("Commit"),ABORT("Abort"),
+		PRECOMMIT("precommit"),ACK("ack");
 		public String message;
-		String value() { 
+		public String value() { 
 			return message;
 		}
 		MessageTypes(String message) {
@@ -16,38 +19,21 @@ public class ApplicationMessage {
 	 * All the operations are same except Edit for now. 
 	 * This will also hold the operations for recovery and as such. 
 	 */
-	String message;
-	String operation; 
-	String oldplayListName; 
-	String newPlayListName;
-	String coordinator;
-	String vote;
-	String playListOpTarget;
-	public ApplicationMessage(String message) throws Exception{ 
-		this.message = message;
-		String[] subMessages = message.split("\\s+");
-		if(subMessages.length<2) {
-			//TODO message semantics here
-		}
-		operation = subMessages[0];
-		if(isNewCoordinatorMessage()) {
-			coordinator = subMessages[1];
-			return;
-		}
-		if(isAbort() || isCommit()) { 
-			return;
-		}
-		oldplayListName = subMessages[1];
-		if(isDelete() || isAdd()) { 
-			playListOpTarget = subMessages[2];
-			return;
-		}
-		if(isEdit()) {
-			newPlayListName = subMessages[2];
-			playListOpTarget = subMessages[3];
-		}else if (isVote()) {
-			vote = subMessages[1];
-		}
+	public String message;
+	public String operation; 
+	public String oldplayListName; 
+	public String newPlayListName;
+	public int coordinator;
+	public String vote;
+	public String playListOpTarget;
+	public int sender;
+	public int receiver;
+	public ApplicationMessage(int sender) { 
+		this.sender = sender;
+	}
+	public static ApplicationMessage getApplicationMsg(String message) { 
+		Gson g = new Gson();
+		return g.fromJson(message, ApplicationMessage.class);
 	}
 	public boolean isNewCoordinatorMessage() { 
 		return operation.equalsIgnoreCase("NewLeader");
@@ -70,13 +56,17 @@ public class ApplicationMessage {
 	public boolean isDelete() { 
 		return operation.equalsIgnoreCase("Delete");
 	}
+	public boolean isAck() { 
+		return operation.equalsIgnoreCase(MessageTypes.ACK.value());
+	}
 	public String getName() { 
 		return oldplayListName;
 	}
 	public String getNewName() { 
 		return newPlayListName;
 	}
-	public String getNewCoordinator() throws Exception { 
+
+	public int getNewCoordinator() throws Exception { 
 		if(isNewCoordinatorMessage()) { 
 			return coordinator;
 		} else { 
@@ -90,7 +80,11 @@ public class ApplicationMessage {
 		return vote;
 	}
 	public boolean isVote() { 
-		return operation.equalsIgnoreCase("Vote");
+		return operation.equalsIgnoreCase(ApplicationMessage.MessageTypes.VOTE.value());
+	}
+	public String toString() { 
+		Gson g = new Gson(); 
+		return g.toJson(this);
 	}
 
 }

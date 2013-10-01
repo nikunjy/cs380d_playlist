@@ -5,4 +5,4 @@ port2=8890
 host0=127.0.0.1
 host1=127.0.0.1
 host2=127.0.0.1
-procNum=0
+procNum=2

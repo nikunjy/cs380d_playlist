@@ -9,10 +9,9 @@ import ut.distcomp.framework.Config;
 public class ApplicationInitializer {
 	public static void main(String[] args) { 
 		Config config = null;
+		
 		try { 
 		config = new Config(args[0]);
-		System.out.println("hello"+config.procNum);
-		
 		PlayListProcess process = new PlayListProcess(config);
 		process.run();
 		}catch(Exception e) { 

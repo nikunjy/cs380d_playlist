@@ -15,16 +15,19 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import ut.distcomp.framework.Config;
 import ut.distcomp.framework.NetController;
+import ut.distcomp.states.StateManager;
 
 
 public class PlayListProcess extends Thread{
 	public enum LogCategories {
-		DECISION("lastDecision"),PLAYLIST("playList"),LIVEADDRESS("liveAddress"),LIVEPORTS("livePorts"),OPERATION("operation");
+		DECISION("lastDecision"),PLAYLIST("playList"),LIVEADDRESS("liveAddress"),LIVEPORTS("livePorts"),OPERATION("operation"),LASTSTATE("lastState");
 		public String category;
 		public String value() { 
 			return category;
@@ -39,6 +42,10 @@ public class PlayListProcess extends Thread{
 	private Reader reader;
 	private Config config;
 	private volatile boolean isCoordinator;
+	public int coordinator;
+	public void setIsCoordinator(boolean isCoordinator) { 
+		this.isCoordinator = isCoordinator;
+	}
 	Properties props;
 	private List<String> playList;
 	public PlayListProcess(Config config) {
@@ -79,7 +86,7 @@ public class PlayListProcess extends Thread{
 		serverImpl = new NetController(config);
 		playList = new ArrayList<String>();
 	}
-	private Properties getProperties() {
+	public Properties getProperties() {
 		Properties prop = new Properties();
 		try {
 		prop.load(new FileInputStream(dtLog));
@@ -89,7 +96,7 @@ public class PlayListProcess extends Thread{
 		return prop;
 		
 	}
-	private List<String> getPlayListFromLog() { 
+	public List<String> getPlayListFromLog() { 
 		Properties prop = new Properties();
 		try {
 		prop.load(new FileInputStream(dtLog));
@@ -111,7 +118,7 @@ public class PlayListProcess extends Thread{
 		}
 		return serializedList;
 	}
-	private void writeProperties(Properties props) {
+	public void writeProperties(Properties props) {
 		try {
 		File f = new File(dtLog);
 		OutputStream out = new FileOutputStream(f);
@@ -123,6 +130,16 @@ public class PlayListProcess extends Thread{
 		}
 		
 	}
+	public boolean broadCast(ApplicationMessage message) {
+		boolean success = true;
+		for(int i = 0; i<config.addresses.length;i++) {
+			if(i != config.procNum)
+				success &= serverImpl.sendMsg(i, message.toString());
+		}
+		if (success)
+			config.logger.info("Sent broadcast"+message+"\n");
+		return success;
+	}
 	
 	public void recovery() { 
 
@@ -133,67 +150,27 @@ public class PlayListProcess extends Thread{
 	}
 	public void run() {
 		//Write what happens if the server comes up.
+		Map<String,Object> context = new HashMap<String,Object>();
+		context.put("config",config);
+		context.put("serverImpl",serverImpl);
+		context.put("process", this);
 		if (isCoordinator) {
-			config.logger.info("I am coordinator");
-			for(int i=0;i<config.addresses.length;i++) { 
-				serverImpl.sendMsg(i,"Add List1 1");
-				config.logger.info("Message sent to "+i);
+			StateManager manager = new StateManager(); 
+			try {
+				manager.initiateAsCoordinator(context);
+			} catch(Exception e) { 
+				e.printStackTrace();
+				config.logger.info("Unexpected problem");
 			}
-			while(true) {
-			List<String> receivedVotes = serverImpl.getReceivedMsgs();
-			if(receivedVotes.size()>0)
-				config.logger.info(receivedVotes.toString());
-			int totalVotes = 0;
-			
-			for(String vote : receivedVotes) { 
-				try {
-					ApplicationMessage msg = new ApplicationMessage(vote);
-					if(msg.isVote()) { 
-						totalVotes+=1;
-						if(msg.getVote().equalsIgnoreCase("No")) {
-							props.setProperty(LogCategories.DECISION.value(),"ABORT");
-							writeProperties(props);
-							config.logger.info("Received a No");
-							for(int i=1;i<config.addresses.length;i++) { 
-								serverImpl.sendMsg(i,ApplicationMessage.MessageTypes.ABORT.value());
-							}
-							
-							break;
-						}
-					}
-				}catch(Exception e) {
-					e.printStackTrace();
-				}	
-			}
+		} else {
+			StateManager manager = new StateManager(); 
+			try {
+				manager.startProcess(context);
+			} catch(Exception e) {
+				e.printStackTrace();
+				config.logger.info("Unexpected problem"+e);
 			}
 			
-		} else { 
-			while(true) {
-			List<String> messages = serverImpl.getReceivedMsgs();
-			if(messages.size()>0)
-			config.logger.info(messages.toString());
-			/*
-			 * Messages received are FIFO. Assumed here. If not we might have to implement sequence number as well.
-			 * TODO make sure the messages received are fine. 
-			 */
-			for (String message : messages) { 
-				try {
-					ApplicationMessage msg = new ApplicationMessage(message);
-					if(msg.isPlayListOperation()) {
-						//Make the call of sending yes/no
-						props.setProperty(LogCategories.DECISION.value(),"No");
-						writeProperties(props);
-						boolean result = serverImpl.sendMsg(0,"Vote No");
-						if(result)
-							config.logger.info("Message sent to coordinator");
-					}
-
-				} catch(Exception e) { 
-					//TODO take care of this. Maybe just ignore ? 
-				}
-
-			}
-			}
 		}
 
 	}

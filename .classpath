@@ -3,5 +3,8 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="lib" path="lib/NetFramework.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/gson-2.2.4.jar"/>
+	<classpathentry kind="lib" path="lib/reflections-0.9.9-RC1-uberjar.jar"/>
+	<classpathentry kind="lib" path="lib/guava-15.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
