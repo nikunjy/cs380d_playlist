@@ -115,7 +115,7 @@ public class StateManager {
 						&& !currentState.getName().equalsIgnoreCase(
 								"processWaitForStateReq") && !transition.equals("NOOP"))
 					context.put("lastState", currentState.getName());
-
+				
 				currentState = nextState;
 			}
 		}
