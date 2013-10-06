@@ -51,7 +51,7 @@ public class PlayListProcess extends Thread{
 	public PlayListProcess(Config config) {
 		this.config = config;
 		int processId = config.procNum;
-		dtLog = "f:/dt_playlist/"+processId;
+		dtLog = "/tmp/dt_playlist/"+processId;
 		props = new Properties();
 		LogCategories[] categories = LogCategories.values();
 		for(LogCategories category : categories) {
@@ -154,6 +154,7 @@ public class PlayListProcess extends Thread{
 		context.put("config",config);
 		context.put("serverImpl",serverImpl);
 		context.put("process", this);
+		context.put("lastState", null);
 		if (isCoordinator) {
 			StateManager manager = new StateManager(); 
 			try {

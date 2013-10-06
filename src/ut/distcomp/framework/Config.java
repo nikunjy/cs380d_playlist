@@ -30,6 +30,7 @@ public class Config {
 		Properties prop = new Properties();
 		prop.load(new FileInputStream(filename));
 		numProcesses = loadInt(prop,"NumProcesses");
+		//System.out.println("Numprocs= "+numProcesses);
 		addresses = new InetAddress[numProcesses];
 		ports = new int[numProcesses];
 		for (int i=0; i < numProcesses; i++) {

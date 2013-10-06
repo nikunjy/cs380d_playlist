@@ -19,33 +19,48 @@ public class ProcessWaitForPreCommit implements State{
 		WaitUtil.waitUntilTimeout();
 		List<String> messages = serverImpl.getReceivedMsgs();
 		boolean error = false;
-		System.out.println(messages);
-		for(String msg : messages) { 
-			ApplicationMessage message = ApplicationMessage.getApplicationMsg(msg); 
-			if(message.isPreCommit()) {
-				config.logger.info("Received precommit");
-				Properties props = pprocess.getProperties();
-				props.setProperty(PlayListProcess.LogCategories.LASTSTATE.value(),message.operation);
-				pprocess.writeProperties(props);
-				if(InstructionUtils.sendAck()) {
-					ApplicationMessage reply = new ApplicationMessage(config.procNum); 
-					reply.operation = ApplicationMessage.MessageTypes.ACK.value();
-					config.logger.info("Sent an ACK");
-					serverImpl.sendMsg(message.sender, reply.toString());
-				}		
-				return "SUCCESS";
-			}
-			if(message.isAbort()) {
-				Properties props = pprocess.getProperties();
-				props.setProperty(PlayListProcess.LogCategories.OPERATION.value(), "");
-				props.setProperty(PlayListProcess.LogCategories.DECISION.value(), message.operation);
-				pprocess.writeProperties(props);
-				return "ABORT";
+		if (messages.size() != 0) {
+			System.out.println(messages);
+			for (String msg : messages) {
+				ApplicationMessage message = ApplicationMessage
+						.getApplicationMsg(msg);
+				if (message.isPreCommit()) {
+					config.logger.info("Received precommit");
+					Properties props = pprocess.getProperties();
+					props.setProperty(
+							PlayListProcess.LogCategories.LASTSTATE.value(),
+							message.operation);
+					pprocess.writeProperties(props);
+					if (InstructionUtils.sendAck()) {
+						ApplicationMessage reply = new ApplicationMessage(
+								config.procNum);
+						reply.operation = ApplicationMessage.MessageTypes.ACK
+								.value();
+						config.logger.info("Sent an ACK");
+						serverImpl.sendMsg(message.sender, reply.toString());
+					}
+					return "SUCCESS";
+				}
+				if (message.isAbort()) {
+					Properties props = pprocess.getProperties();
+					props.setProperty(
+							PlayListProcess.LogCategories.OPERATION.value(), "");
+					props.setProperty(
+							PlayListProcess.LogCategories.DECISION.value(),
+							message.operation);
+					pprocess.writeProperties(props);
+					return "ABORT";
+				}
 			}
 		}
-		//TODO only transition error when hearbeast is false
-		return "ERROR";
-		
+		//TODO only transition error when heartbeat is false
+//		else { // Need to re-elect
+//			ApplicationMessage reply = new ApplicationMessage(config.procNum);
+//			reply.operation = ApplicationMessage.MessageTypes.ELECT.value();
+//			
+//			return "ERROR";
+//		}
+		return "REELECT";
 	}
 	public String getName() { 
 		return "processWaitForPreCommit";

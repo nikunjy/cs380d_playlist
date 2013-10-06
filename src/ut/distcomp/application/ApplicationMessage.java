@@ -6,7 +6,7 @@ public class ApplicationMessage {
 	
 	public enum MessageTypes {
 		ADD("Add"),DELETE("Delete"),EDIT("Edit"),ELECT("NewLeader"),VOTE("Vote"),COMMIT("Commit"),ABORT("Abort"),
-		PRECOMMIT("precommit"),ACK("ack");
+		PRECOMMIT("precommit"),ACK("ack"),STATEREQ("stateReq"),STATERESP("stateResp");
 		public String message;
 		public String value() { 
 			return message;
@@ -58,6 +58,12 @@ public class ApplicationMessage {
 	}
 	public boolean isAck() { 
 		return operation.equalsIgnoreCase(MessageTypes.ACK.value());
+	}
+	public boolean isStateReq() {
+		return operation.equalsIgnoreCase("stateReq");
+	}
+	public boolean isStateResp() {
+		return operation.equalsIgnoreCase("stateResp");
 	}
 	public String getName() { 
 		return oldplayListName;

@@ -3,14 +3,14 @@
     <!--this file was created by Eclipse Runnable JAR Export Wizard-->
     <!--ANT 1.7 is required                                        -->
     <target name="create_run_jar">
-        <delete><fileset dir="E:/git/cs380d_playlist/bin"/></delete>
-        <jar destfile="E:/git/system.jar" filesetmanifest="mergewithoutmain">
+      
+        <jar destfile="/h2/bharat/git/run.jar" filesetmanifest="mergewithoutmain">
             <manifest>
                 <attribute name="Main-Class" value="ut.distcomp.application.ApplicationInitializer"/>
                 <attribute name="Class-Path" value="."/>
             </manifest>
-            <fileset dir="E:/git/cs380d_playlist/bin"/>
-            <zipfileset excludes="META-INF/*.SF" src="E:/git/cs380d_playlist/lib/NetFramework.jar"/>
+            <fileset dir="/h2/bharat/git/cs380d_playlist/bin"/>
+            <zipfileset excludes="META-INF/*.SF" src="/h2/bharat/git/cs380d_playlist/lib/NetFramework.jar"/>
         </jar>
     </target>
 </project>
