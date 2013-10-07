@@ -15,16 +15,15 @@ public class ProcessElect implements State{
 		NetController serverImpl = (NetController)ctx.get("serverImpl");
 		PlayListProcess pprocess = (PlayListProcess)ctx.get("process");
 		/*Need logic to determine just by looking at UP set, who the new co-ordinator is*/
-		for(int i = 0;i<config.procNum ;i++) { 
-			//if(i!=pprocess.coordinator) { 
-				ApplicationMessage message = new ApplicationMessage(config.procNum);
-				message.operation = ApplicationMessage.MessageTypes.ELECT.value();
-				boolean success = serverImpl.sendMsg(i, message.toString());
-				if(success) {
-					return "PARTICIPANT";
-				}
-			//}
+		for(int i = 0;i<config.procNum ;i++) {  
+			ApplicationMessage message = new ApplicationMessage(config.procNum);
+			message.operation = ApplicationMessage.MessageTypes.ELECT.value();
+			boolean success = serverImpl.sendMsg(i, message.toString());
+			if(success) {
+				return "PARTICIPANT";
+			}
 		}
+		config.logger.info("I am the new Coordinator");
 		return "ELECTED";
 	}
 	public String getName() { 

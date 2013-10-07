@@ -18,12 +18,10 @@ public class CoordinatorWaitForAck implements State{
 		PlayListProcess pprocess = (PlayListProcess)ctx.get("process");
 		WaitUtil.waitUntilTimeout();
 		List<String> messages = serverImpl.getReceivedMsgs();
-		System.out.println(messages);
 		for(String msg : messages) { 
 			ApplicationMessage message = ApplicationMessage.getApplicationMsg(msg); 
 			if(message.isAck()) { 
 				Properties props = pprocess.getProperties();
-				
 				int sender = message.sender;
 				ApplicationMessage reply = new ApplicationMessage(config.procNum);
 				reply.operation = ApplicationMessage.MessageTypes.COMMIT.value();
@@ -33,12 +31,15 @@ public class CoordinatorWaitForAck implements State{
 				serverImpl.sendMsg(sender,reply.toString());
 			}
 		}
+		
 		if(messages.size()>0) { 
-			return "SUCCESS"; 
+			serverImpl.purgeMessages();
+			return "SUCCESS";
 		}
 		ApplicationMessage reply = new ApplicationMessage(config.procNum); 
 		reply.operation = ApplicationMessage.MessageTypes.ABORT.value();
 		pprocess.broadCast(reply);
+		serverImpl.purgeMessages();
 		return "ABORT";		
 	}
 	public String getName() { 

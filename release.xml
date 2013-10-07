@@ -1,16 +1,21 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<project default="create_run_jar" name="Create Runnable Jar for Project cs380d_playlist">
+<project default="create_run_jar" name="Create Runnable Jar for Project cs380d_playlist with Jar-in-Jar Loader">
     <!--this file was created by Eclipse Runnable JAR Export Wizard-->
     <!--ANT 1.7 is required                                        -->
     <target name="create_run_jar">
-      
-        <jar destfile="/h2/bharat/git/run.jar" filesetmanifest="mergewithoutmain">
+        <jar destfile="/v/filer4b/v20q001/nikunj/git/run.jar">
             <manifest>
-                <attribute name="Main-Class" value="ut.distcomp.application.ApplicationInitializer"/>
+                <attribute name="Main-Class" value="org.eclipse.jdt.internal.jarinjarloader.JarRsrcLoader"/>
+                <attribute name="Rsrc-Main-Class" value="ut.distcomp.application.ApplicationInitializer"/>
                 <attribute name="Class-Path" value="."/>
+                <attribute name="Rsrc-Class-Path" value="./ NetFramework.jar gson-2.2.4.jar reflections-0.9.9-RC1-uberjar.jar guava-15.0.jar"/>
             </manifest>
-            <fileset dir="/h2/bharat/git/cs380d_playlist/bin"/>
-            <zipfileset excludes="META-INF/*.SF" src="/h2/bharat/git/cs380d_playlist/lib/NetFramework.jar"/>
+            <zipfileset src="jar-in-jar-loader.zip"/>
+            <fileset dir="/v/filer4b/v20q001/nikunj/git/cs380d_playlist/bin"/>
+            <zipfileset dir="/v/filer4b/v20q001/nikunj/git/cs380d_playlist/lib" includes="NetFramework.jar"/>
+            <zipfileset dir="/v/filer4b/v20q001/nikunj/git/cs380d_playlist/lib" includes="gson-2.2.4.jar"/>
+            <zipfileset dir="/v/filer4b/v20q001/nikunj/git/cs380d_playlist/lib" includes="reflections-0.9.9-RC1-uberjar.jar"/>
+            <zipfileset dir="/v/filer4b/v20q001/nikunj/git/cs380d_playlist/lib" includes="guava-15.0.jar"/>
         </jar>
     </target>
 </project>

@@ -30,13 +30,14 @@ public class NetController {
 	private final List<IncomingSock> inSockets;
 	private final OutgoingSock[] outSockets;
 	private final ListenServer listener;
-	
+	List<String> objs;
 	public NetController(Config config) {
 		this.config = config;
 		inSockets = Collections.synchronizedList(new ArrayList<IncomingSock>());
 		listener = new ListenServer(config, inSockets);
 		outSockets = new OutgoingSock[config.numProcesses];
 		listener.start();
+		objs = new ArrayList<String>();
 	}
 	
 	// Establish outgoing connection to a process
@@ -96,7 +97,6 @@ public class NetController {
 	 * @return list of messages sorted by socket, in FIFO order. *not sorted by time received*
 	 */
 	public synchronized List<String> getReceivedMsgs() {
-		List<String> objs = new ArrayList<String>();
 		synchronized(inSockets) {
 			ListIterator<IncomingSock> iter  = inSockets.listIterator();
 			while (iter.hasNext()) {
@@ -113,6 +113,9 @@ public class NetController {
 		}
 		
 		return objs;
+	}
+	public void purgeMessages() { 
+		objs.clear();
 	}
 	/**
 	 * Shuts down threads and sockets.

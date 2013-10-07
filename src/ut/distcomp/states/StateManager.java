@@ -17,14 +17,16 @@ public class StateManager {
 	static {
 		allStates.add(new CoordinatorFirstPhaseWait());
 		allStates.add(new CoordinatorInitiate());
-		allStates.add(new CoordinatorWaitForAck()); 
+		allStates.add(new CoordinatorWaitForAck());
+		allStates.add(new CoordinatorAskForStateReq());
+		allStates.add(new CoordinatorWaitForState());
 		allStates.add(new ProcessWaitForDecision());
 		allStates.add(new ProcessWaitForInitiate());  
 		allStates.add(new ProcessWaitForPreCommit());
+		allStates.add(new ProcessCommitted());
+		allStates.add(new ProcessAborted());
 		allStates.add(new ProcessElect());
 		allStates.add(new ProcessWaitForStateReq());
-		allStates.add(new CoordinatorAskForStateReq());
-		allStates.add(new CoordinatorWaitForState());
 		
 		for(State state : allStates) {
 			stateNameMap.put(state.getName(), state);
@@ -34,6 +36,7 @@ public class StateManager {
 		coordinatorDFA.add(new TransitionWrapper("ABORT","coordinatorFirstPhaseWait","coordinatorInitiate"));
 		coordinatorDFA.add(new TransitionWrapper("PRECOMMIT","coordinatorFirstPhaseWait","coordinatorWaitForAck"));
 		coordinatorDFA.add(new TransitionWrapper("SUCCESS","coordinatorWaitForAck","coordinatorInitiate"));
+		coordinatorDFA.add(new TransitionWrapper("ABORT","coordinatorWaitForAck","coordinatorInitiate"));
 		coordinatorDFA.add(new TransitionWrapper("ERROR","coordinatorWaitForAck","coordinatorInitiate"));
 		
 		
@@ -59,6 +62,12 @@ public class StateManager {
 				return stateNameMap.get(wrapper.toState);
 			}
 		}
+		if (dfa != coordinatorDFA) 
+		for(TransitionWrapper wrapper : coordinatorDFA) {
+			if(wrapper.fromState.equalsIgnoreCase(currentState.getName()) && wrapper.decision.equalsIgnoreCase(transition)) {
+				return stateNameMap.get(wrapper.toState);
+			}
+		}
 		return null;
 	}
 	public void initiateAsCoordinator(Map<String,Object> context) throws Exception{
@@ -80,25 +89,24 @@ public class StateManager {
 	}
 
 	public void startProcess(Map<String, Object> context) throws Exception {
-
 		for (State state : allStates) {
 			state.setContext(context);
 		}
-
 		Config config = (Config) context.get("config");
 		config.logger.info("Starting process " + config.procNum);
 		State currentState = stateNameMap.get("processWaitForInitiate");
 		while (true) {
 			String transition = currentState.operate();
-			if (currentState.getName().equalsIgnoreCase(
-					"processWaitForStateReq")) {
+			if (currentState.getName()
+					.equalsIgnoreCase("processWaitForStateReq")) {
+				
 				if(transition.equalsIgnoreCase("REELECT"))
-					currentState = new ProcessElect();
+					currentState = stateNameMap.get("processElect");
 				else
 					currentState = stateNameMap.get(context.get("lastState"));
 				
 				config.logger.info("Made a transition " + transition
-						+ " from processWaitForStateReq to" + currentState.getName());
+						+ " from processWaitForStateReq to " + currentState.getName());
 			}
 			else {
 				State nextState = makeTransition(processDFA, currentState,

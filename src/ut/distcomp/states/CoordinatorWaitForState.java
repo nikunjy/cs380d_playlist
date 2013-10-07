@@ -22,13 +22,14 @@ public class CoordinatorWaitForState implements State{
 		PlayListProcess pprocess = (PlayListProcess)ctx.get("process");
 		
 		List<Integer> procs = new ArrayList<Integer>();
-		WaitUtil.waitUntilTimeout();
+		WaitUtil.waitUntilTimeout(4000);
 		List<String> messages = serverImpl.getReceivedMsgs();
 		/*Add its own state*/
 		ApplicationMessage mesg = new ApplicationMessage(config.procNum);
 		mesg.operation = ApplicationMessage.MessageTypes.STATERESP.value();
 		mesg.message = (String)ctx.get("lastState");
 		messages.add(mesg.toString());
+		boolean committableProcess = true;
 		for(String msg : messages) {
 			ApplicationMessage message = ApplicationMessage.getApplicationMsg(msg);
 			if(message.isStateResp()) {
@@ -41,10 +42,7 @@ public class CoordinatorWaitForState implements State{
 					break;
 				}
 				if(message.message.equalsIgnoreCase("processWaitForDecision")) {
-					decision = 3;
-				}
-				else if(message.message.equalsIgnoreCase("processWaitForPreCommit")) {
-					procs.add(message.sender);
+					committableProcess = true;
 				}
 			}
 		}
@@ -54,7 +52,8 @@ public class CoordinatorWaitForState implements State{
 				"waitForState");
 		
 		
-		if(decision != 3) {
+		if(!committableProcess) {
+			
 			if (decision == 1) {
 				p.setProperty(PlayListProcess.LogCategories.DECISION.value(),
 						"commit");
@@ -76,20 +75,19 @@ public class CoordinatorWaitForState implements State{
 			return "DONE";
 		}
 		else {
+			config.logger.info("Found a process comittable");
 			p.setProperty(PlayListProcess.LogCategories.DECISION.value(),
 					"precommit");
 			pprocess.writeProperties(p);
 			reply.operation = ApplicationMessage.MessageTypes.PRECOMMIT.value();
-			
-			for(int i : procs) {
-				serverImpl.sendMsg(i, reply.toString());
-			}
+			for(int j = config.procNum + 1; j < config.addresses.length; j++) 
+				serverImpl.sendMsg(j, reply.toString());
 			return "PRECOMMIT";
 		}
 		
 	}
 	public String getName() { 
-		return "CoordinatorWaitForState"; 
+		return "coordinatorWaitForState"; 
 	}
 	public void setContext(Map<String,Object> context) { 
 		ctx = context;

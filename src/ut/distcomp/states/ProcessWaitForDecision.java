@@ -16,18 +16,20 @@ public class ProcessWaitForDecision implements State{
 		Config config = (Config)ctx.get("config");
 		NetController serverImpl = (NetController)ctx.get("serverImpl");
 		PlayListProcess pprocess = (PlayListProcess)ctx.get("process");
+		ctx.put("lastState", getName());
 		WaitUtil.waitUntilTimeout();
 		List<String> messages = serverImpl.getReceivedMsgs();
+		System.out.println(messages);
 		for(String msg : messages) { 
 			ApplicationMessage message = ApplicationMessage.getApplicationMsg(msg); 
-			if(message.isCommit()) { 
+			if(message.isCommit() || message.isAbort()) { 
 				Properties props = pprocess.getProperties();
 				props.setProperty(PlayListProcess.LogCategories.DECISION.value(), message.operation);
 				pprocess.writeProperties(props); 
 				return "SUCCESS";
 			}
 		}
-		return "ERROR";
+		return "REELECT";
 	}
 	public String getName() { 
 		return "processWaitForDecision";

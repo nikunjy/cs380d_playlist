@@ -42,7 +42,7 @@ public class CoordinatorFirstPhaseWait implements State {
 				}
 			}
 		}
-		
+		serverImpl.purgeMessages();
 		for(int i=0;i<votes.length;i++) { 
 			count+=votes[i];
 		}

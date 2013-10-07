@@ -16,6 +16,7 @@ public class ProcessWaitForPreCommit implements State{
 		Config config = (Config)ctx.get("config");
 		NetController serverImpl = (NetController)ctx.get("serverImpl");
 		PlayListProcess pprocess = (PlayListProcess)ctx.get("process");
+		ctx.put("lastState",getName()); 
 		WaitUtil.waitUntilTimeout();
 		List<String> messages = serverImpl.getReceivedMsgs();
 		boolean error = false;
@@ -53,13 +54,6 @@ public class ProcessWaitForPreCommit implements State{
 				}
 			}
 		}
-		//TODO only transition error when heartbeat is false
-//		else { // Need to re-elect
-//			ApplicationMessage reply = new ApplicationMessage(config.procNum);
-//			reply.operation = ApplicationMessage.MessageTypes.ELECT.value();
-//			
-//			return "ERROR";
-//		}
 		return "REELECT";
 	}
 	public String getName() { 
