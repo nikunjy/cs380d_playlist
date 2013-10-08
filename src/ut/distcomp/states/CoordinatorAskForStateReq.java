@@ -20,6 +20,7 @@ public class CoordinatorAskForStateReq implements State{
 		NetController serverImpl = (NetController)ctx.get("serverImpl");
 		ApplicationMessage msg = new ApplicationMessage(config.procNum);
 		msg.operation = ApplicationMessage.MessageTypes.STATEREQ.value();
+		InstructionUtils.killProcess();
 		/*Need UP set here to, to broadcast*/
 		for(int i=0;i<config.addresses.length;i++) {
 			if(i != config.procNum)

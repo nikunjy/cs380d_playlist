@@ -1,9 +1,11 @@
 package ut.distcomp.states;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.TreeSet;
 
 import ut.distcomp.application.ApplicationMessage;
 import ut.distcomp.application.PlayListProcess;
@@ -18,13 +20,26 @@ public class CoordinatorFirstPhaseWait implements State {
 	 * @see ut.distcomp.states.State#operate()
 	 * This state is reached when the processes have been sent messages successfullly.
 	 */
+	private Set<Integer> interSection(Set<Integer> set1, Set<Integer> set2)  {
+		Set<Integer> intersection = new HashSet<Integer>();
+		for(Integer i : set1) { 
+			if(set2.contains(i)) { 
+				intersection.add(i);
+			}
+		}
+		return intersection;
+	}
+	private boolean isSubset(Set<Integer> set1, Set<Integer> set2) {
+		return set1.equals(interSection(set1,set2));
+	}
 	public String operate() { 
 		Config config = (Config)ctx.get("config");
 		NetController serverImpl = (NetController)ctx.get("serverImpl");
 		PlayListProcess pprocess = (PlayListProcess)ctx.get("process");
 		
 		int yesVotes = 1;
-		int totalVotes = 1;
+		Set<Integer> totalVoters = new TreeSet<Integer>();
+		totalVoters.add(config.procNum);
 		while (true) {
 			WaitUtil.waitUntilTimeout(500);
 			List<String> messages = serverImpl.getReceivedMsgs();
@@ -34,11 +49,11 @@ public class CoordinatorFirstPhaseWait implements State {
 					if(message.getVote().equalsIgnoreCase("Yes")) {
 						yesVotes++;
 					} 
-					totalVotes++;
+					totalVoters.add(message.sender);
 				}
 			}
 			Set<Integer> liveSet = pprocess.getLiveSet();
-			if (liveSet.size() == totalVotes) {
+			if (isSubset(liveSet,totalVoters)) {
 				break;
 			}
 		}

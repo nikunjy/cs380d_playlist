@@ -52,9 +52,11 @@ public class StateManager {
 		processDFA.add(new TransitionWrapper("SUCCESS","processWaitForPreCommit","processWaitForDecision"));
 		processDFA.add(new TransitionWrapper("ABORT","processWaitForPreCommit","processAborted"));
 		processDFA.add(new TransitionWrapper("REELECT","processWaitForPreCommit","processElect"));
+		processDFA.add(new TransitionWrapper("REELECT","processWaitForStateReq","processElect"));
 		processDFA.add(new TransitionWrapper("DONE","processAborted","processWaitForInitiate"));
 		processDFA.add(new TransitionWrapper("BECOMECOORD","processAborted","coordinatorTerminal"));
-		processDFA.add(new TransitionWrapper("SUCCESS","processWaitForDecision","processCommitted"));
+		processDFA.add(new TransitionWrapper("COMMIT","processWaitForDecision","processCommitted"));
+		processDFA.add(new TransitionWrapper("ABORT","processWaitForDecision","processAborted"));
 		processDFA.add(new TransitionWrapper("DONE","processCommitted", "processWaitForInitiate"));
 		processDFA.add(new TransitionWrapper("BECOMECOORD","processCommitted","coordinatorTerminal"));
 		processDFA.add(new TransitionWrapper("REELECT","processWaitForDecision","processElect"));
@@ -72,7 +74,10 @@ public class StateManager {
 		recoveryDFA.add(new TransitionWrapper("NOOP","askOtherProcesses", "askOtherProcesses"));
 		recoveryDFA.add(new TransitionWrapper("TOTALFAILURE","askOtherProcesses", "totalFailureRecovery"));
 		recoveryDFA.add(new TransitionWrapper("TOTALFAILURE","totalFailureRecovery", "totalFailureRecovery"));
-		recoveryDFA.add(new TransitionWrapper("REELECT","totalFailureRecovery", "processElect"));
+		recoveryDFA.add(new TransitionWrapper("ASKOTHERS","totalFailureRecovery", "askOtherProcesses"));
+		//recoveryDFA.add(new TransitionWrapper("REELECT","totalFailureRecovery", "processElect"));
+		recoveryDFA.add(new TransitionWrapper("COMMIT","totalFailureRecovery", "processCommitted"));
+		recoveryDFA.add(new TransitionWrapper("ABORT","totalFailureRecovery", "processAborted"));
 
 
 	}
@@ -138,6 +143,9 @@ public class StateManager {
 							+ " from " + currentState.getName() + " "
 							+ nextState.getName());	
 				currentState = nextState;
+				if(currentState.getName().equalsIgnoreCase("processWaitForInitiate") || currentState.getName().equalsIgnoreCase("coordinatorInitiate")) {
+					break;
+				}
 			}
 		} else {
 			throw new Exception("Recovery Failed");
@@ -158,8 +166,10 @@ public class StateManager {
 
 				if(transition.equalsIgnoreCase("REELECT"))
 					currentState = stateNameMap.get("processElect");
-				else
+				else {
+					System.out.println(context.get("lastState"));
 					currentState = stateNameMap.get(context.get("lastState"));
+				}
 
 				config.logger.info("Made a transition " + transition
 						+ " from processWaitForStateReq to " + currentState.getName());
@@ -175,12 +185,7 @@ public class StateManager {
 					config.logger.info("Made a transition " + transition
 							+ " from " + currentState.getName() + " "
 							+ nextState.getName());
-				//TODO change this
-				if (!currentState.getName().equalsIgnoreCase("processElect")
-						&& !currentState.getName().equalsIgnoreCase(
-								"processWaitForStateReq") && !transition.equals("NOOP"))
-					context.put("lastState", currentState.getName());
-
+				
 				currentState = nextState;
 			}
 			if(!transition.equalsIgnoreCase("NOOP")) {

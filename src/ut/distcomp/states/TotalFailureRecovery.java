@@ -3,6 +3,7 @@ package ut.distcomp.states;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 import ut.distcomp.application.ApplicationMessage;
@@ -39,6 +40,8 @@ public class TotalFailureRecovery implements State{
 		return recoveringProcs;
 	}
 	private boolean isSubset(Set<Integer> set1, Set<Integer> set2) {
+		if(set1.size() == 0) 
+			return false;
 		return set1.equals(interSection(set1,set2));
 	}
 	public String operate() { 
@@ -49,20 +52,39 @@ public class TotalFailureRecovery implements State{
 		WaitUtil.waitUntilTimeout();
 		Set<Integer> recoveringProcs = sendLiveSetMessage(pprocess.liveSet);
 		Set<Integer> intersectionSet =  pprocess.liveSet;
-		 
+		WaitUtil.waitUntilTimeout();
 		List<String> messages = serverImpl.getReceivedMsgs(); 
 		for(String msg : messages) {  
 			ApplicationMessage message = ApplicationMessage.getApplicationMsg(msg);
 			if (message.isUpSetMessage())  {
 				Set<Integer> recvLiveSet = message.getLiveSetFromMessage(message.message);
-				interSection(intersectionSet,recvLiveSet);
+				System.out.println("Received "+recvLiveSet);
+				intersectionSet = interSection(intersectionSet,recvLiveSet);
+			}
+		}	
+		
+		if (isSubset(intersectionSet,recoveringProcs)) {
+			System.out.println("Entered the section");
+			String lastState = "";
+			if(ctx.get("lastState")!=null) { 
+				lastState = (String)ctx.get("lastState");
+			}
+			if (lastState.equalsIgnoreCase("processWaitForDecision")) {
+				ctx.put("lastDecision", "Commit");
+				serverImpl.openPing();
+				return "COMMIT";
+			} else { 
+				WaitUtil.waitUntilTimeout(4000);
+				if(pprocess.getLiveSet().size()!=0) { 
+					return "ASKOTHERS";
+				} else { 
+					ctx.put("lastDecision", "Abort");
+					return "ABORT";
+				}
 			}
 		}
-		if (isSubset(recoveringProcs,intersectionSet)) { 
-			pprocess.writeLiveSet(recoveringProcs);
-			pprocess.coordinator = 0;
-			serverImpl.openPing();
-			return "REELECT";
+		if(pprocess.getLiveSet().size()!=0) { 
+			return "ASKOTHERS";
 		}
 		return "TOTALFAILURE";
 		

@@ -129,6 +129,11 @@ public class PlayListProcess extends Thread{
 		}
 		return ret;
 	}
+	public void saveDecision(String decision) { 
+		Properties props = getProperties(); 
+		props.setProperty(PlayListProcess.LogCategories.DECISION.value(), decision);
+		writeProperties(props);
+	}
 	public Set<Integer> getUpSetFromLog(Properties props){
 		String upsetLog = props.getProperty(PlayListProcess.LogCategories.LIVESET.value());
 		String[] procs = upsetLog.split(" ");
@@ -204,7 +209,6 @@ public class PlayListProcess extends Thread{
 
 	public void recovery() {
 		serverImpl.pingShutdown();
-		
 		isRecovering = true;
 		Map<String,Object> context = new HashMap<String,Object>();
 		context.put("config",config);

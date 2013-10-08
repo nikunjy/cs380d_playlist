@@ -23,10 +23,10 @@ public class ProcessElect implements State{
 			message.operation = ApplicationMessage.MessageTypes.ELECT.value();
 			boolean success = serverImpl.sendMsg(liveProcess, message.toString());
 			if(success) {
-				config.logger.info("I am still a participant");
 				pprocess.coordinator = liveProcess;
 				if(liveProcess == config.procNum)
 					break;
+				config.logger.info("I am still a participant");
 				return "PARTICIPANT";
 			}
 		}

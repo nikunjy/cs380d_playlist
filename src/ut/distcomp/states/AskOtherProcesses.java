@@ -1,8 +1,8 @@
 package ut.distcomp.states;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 import ut.distcomp.application.ApplicationMessage;
@@ -31,9 +31,17 @@ public class AskOtherProcesses implements State{
 			for(String msg : messages) { 
 				ApplicationMessage message = ApplicationMessage.getApplicationMsg(msg); 
 				if(message.isCommit()) {
+					Properties props = pprocess.getProperties();
+					props.setProperty(PlayListProcess.LogCategories.DECISION.value(), "Abort");
+					pprocess.writeProperties(props);
+					serverImpl.openPing();
 					return "COMMIT";
 				}
 				if(message.isAbort()) { 
+					Properties props = pprocess.getProperties();
+					props.setProperty(PlayListProcess.LogCategories.DECISION.value(), "Abort");
+					pprocess.writeProperties(props);
+					serverImpl.openPing();
 					return "ABORT";
 				}
 			}

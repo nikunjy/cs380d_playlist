@@ -5,6 +5,7 @@ import java.util.Map;
 
 import ut.distcomp.application.ApplicationMessage;
 import ut.distcomp.application.PlayListProcess;
+import ut.distcomp.application.WaitUtil;
 import ut.distcomp.framework.Config;
 import ut.distcomp.framework.NetController;
 
@@ -23,6 +24,7 @@ public class ProcessCommitted implements State {
 		Config config = (Config)ctx.get("config");
 		config.logger.info("Process Commited");
 		PlayListProcess pprocess = (PlayListProcess)ctx.get("process");
+		pprocess.saveDecision("Commit");
 		if (config.procNum == 0) { 
 			return "BECOMECOORD";
 		}
@@ -31,6 +33,7 @@ public class ProcessCommitted implements State {
 		coordinatorMessage.operation = ApplicationMessage.MessageTypes.COMMIT.value();
 		serverImpl.sendMsg(0,coordinatorMessage.toString());
 		while(true) {
+			WaitUtil.waitUntilTimeout();
 			List<String> messages = serverImpl.getReceivedMsgs();
 			for(String msg : messages) {
 				ApplicationMessage message = ApplicationMessage.getApplicationMsg(msg);

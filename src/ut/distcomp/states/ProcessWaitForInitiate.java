@@ -7,6 +7,7 @@ import java.util.Properties;
 import ut.distcomp.application.ApplicationMessage;
 import ut.distcomp.application.InstructionUtils;
 import ut.distcomp.application.PlayListProcess;
+import ut.distcomp.application.WaitUtil;
 import ut.distcomp.framework.Config;
 import ut.distcomp.framework.NetController;
 
@@ -34,6 +35,7 @@ public class ProcessWaitForInitiate  implements State{
 				return "VoteSent";
 			}
 		}
+		WaitUtil.waitUntilTimeout();
 		return "NOOP";
 	}
 	public String getName() { 

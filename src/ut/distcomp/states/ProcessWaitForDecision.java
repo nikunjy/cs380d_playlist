@@ -26,7 +26,12 @@ public class ProcessWaitForDecision implements State{
 				Properties props = pprocess.getProperties();
 				props.setProperty(PlayListProcess.LogCategories.DECISION.value(), message.operation);
 				pprocess.writeProperties(props); 
-				return "SUCCESS";
+			}
+			if (message.isCommit()) { 
+				return "COMMIT";
+			}
+			if (message.isAbort()) { 
+				return "ABORT";
 			}
 		}
 		ApplicationMessage pingMessage = new ApplicationMessage(config.procNum);

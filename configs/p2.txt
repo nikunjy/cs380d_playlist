@@ -1,8 +1,10 @@
-NumProcesses=3
+NumProcesses=4
 port0=8888
 port1=8889
 port2=8890
+port3=8891
 host0=127.0.0.1
 host1=127.0.0.1
 host2=127.0.0.1
+host3=127.0.0.1
 procNum=1

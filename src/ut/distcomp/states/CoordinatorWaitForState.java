@@ -1,12 +1,14 @@
 package ut.distcomp.states;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
 import ut.distcomp.application.ApplicationMessage;
+import ut.distcomp.application.InstructionUtils;
 import ut.distcomp.application.PlayListProcess;
 import ut.distcomp.application.WaitUtil;
 import ut.distcomp.framework.Config;
@@ -31,8 +33,9 @@ public class CoordinatorWaitForState implements State{
 		mesg.message = (String)ctx.get("lastState");
 		messages.add(mesg.toString());
 		boolean committableProcess = false;
-		int uncertainProcess = 0;
+		Set<Integer> uncertainProcesses = new HashSet<Integer>();
 		boolean ready = false;
+		int count = 0;
 		while(true) {
 			for(String msg : messages) {
 				ApplicationMessage message = ApplicationMessage.getApplicationMsg(msg);
@@ -50,7 +53,7 @@ public class CoordinatorWaitForState implements State{
 						committableProcess = true;
 						
 					}else {
-						uncertainProcess++;
+						uncertainProcesses.add(message.sender);
 						ready = false;
 					}
 				}
@@ -64,11 +67,22 @@ public class CoordinatorWaitForState implements State{
 				if(liveProcess >= config.procNum)
 					countLive++;
 			}
-			if (uncertainProcess == countLive) {
+			if (uncertainProcesses.size() == countLive) {
 				break;
 			}
+			if (count%10 == 0) { 
+				ApplicationMessage msg = new ApplicationMessage(config.procNum);
+				msg.operation = ApplicationMessage.MessageTypes.STATEREQ.value();
+				/*Need UP set here to, to broadcast*/
+				for(int i=0;i<config.addresses.length;i++) {
+					if(i != config.procNum)
+						serverImpl.sendMsg(i,msg.toString());
+				}
+			}
+			WaitUtil.waitUntilTimeout(1000);
+			messages = serverImpl.getReceivedMsgs();
 		}
-
+		InstructionUtils.killProcess();
 		ApplicationMessage reply = new ApplicationMessage(config.procNum);
 		Properties p = pprocess.getProperties();
 		p.setProperty(PlayListProcess.LogCategories.LASTSTATE.value(),
@@ -97,7 +111,7 @@ public class CoordinatorWaitForState implements State{
 		}
 		else {
 			config.logger.info("Found a process comittable");
-			p.setProperty(PlayListProcess.LogCategories.DECISION.value(),
+			p.setProperty(PlayListProcess.LogCategories.LASTSTATE.value(),
 					"Precommit");
 			pprocess.writeProperties(p);
 			reply.operation = ApplicationMessage.MessageTypes.PRECOMMIT.value();

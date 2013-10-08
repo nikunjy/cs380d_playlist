@@ -2,7 +2,6 @@ package ut.distcomp.states;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import ut.distcomp.application.ApplicationMessage;
 import ut.distcomp.application.InstructionUtils;

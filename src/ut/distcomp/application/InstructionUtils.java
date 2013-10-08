@@ -15,6 +15,18 @@ public class InstructionUtils {
 			return "Yes";
 		}
 	}
+	public static void killProcess() { 
+		try {
+			System.out.println("Kill Process ?");
+			BufferedReader bi = new BufferedReader(new InputStreamReader(System.in));
+			String s = bi.readLine();
+			if ( s.equalsIgnoreCase("Kill")){ 
+				System.exit(1);
+			}
+		} catch (Exception e) { 
+			
+		}
+	}
 	public static ApplicationMessage getPlayListOperation(Config config) {
 		BufferedReader bi = new BufferedReader(new InputStreamReader(System.in));
 		String line;

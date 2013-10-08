@@ -3,6 +3,7 @@ package ut.distcomp.states;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import ut.distcomp.application.ApplicationMessage;
 import ut.distcomp.application.PlayListProcess;
@@ -17,14 +18,15 @@ public class CoordinatorWaitForAck implements State{
 		NetController serverImpl = (NetController)ctx.get("serverImpl");
 		PlayListProcess pprocess = (PlayListProcess)ctx.get("process");
 		WaitUtil.waitUntilTimeout();
+		ApplicationMessage reply = new ApplicationMessage(config.procNum);
+		reply.operation = ApplicationMessage.MessageTypes.COMMIT.value();
 		List<String> messages = serverImpl.getReceivedMsgs();
 		int count = 0;
 		for(String msg : messages) { 
 			ApplicationMessage message = ApplicationMessage.getApplicationMsg(msg); 
 			if(message.isAck()) { 
 				int sender = message.sender;
-				ApplicationMessage reply = new ApplicationMessage(config.procNum);
-				reply.operation = ApplicationMessage.MessageTypes.COMMIT.value();
+				
 				if (count == 0) {
 					Properties props = pprocess.getProperties();
 					props.setProperty(PlayListProcess.LogCategories.DECISION.value(), reply.operation);	
@@ -34,15 +36,19 @@ public class CoordinatorWaitForAck implements State{
 				serverImpl.sendMsg(sender,reply.toString());
 			}
 		}
-		
-		if(messages.size()>0) {
-			if (config.procNum != 0) {
-				return "COMMIT";
-			} else {
-				ctx.put("lastDecision", "COMMIT");
-				return "TERMINAL";
-			}
+
+		Set<Integer> liveSet = pprocess.getLiveSet();
+		for(Integer proc : liveSet) { 
+			serverImpl.sendMsg(proc, reply.toString());
 		}
+		if (config.procNum != 0) {
+			return "COMMIT";
+		} else {
+			ctx.put("lastDecision", "COMMIT");
+			return "TERMINAL";
+		}
+
+		/*
 		ApplicationMessage reply = new ApplicationMessage(config.procNum); 
 		reply.operation = ApplicationMessage.MessageTypes.ABORT.value();
 		pprocess.broadCast(reply);
@@ -51,7 +57,7 @@ public class CoordinatorWaitForAck implements State{
 		} else {
 			ctx.put("lastDecision", "ABORT");
 			return "TERMINAL";
-		}
+		}*/
 	}
 	public String getName() { 
 		return "coordinatorWaitForAck";

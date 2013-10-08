@@ -5,6 +5,7 @@ import java.util.Map;
 
 import ut.distcomp.application.ApplicationMessage;
 import ut.distcomp.application.PlayListProcess;
+import ut.distcomp.application.WaitUtil;
 import ut.distcomp.framework.Config;
 import ut.distcomp.framework.NetController;
 
@@ -22,6 +23,7 @@ public class ProcessAborted implements State{
 		NetController serverImpl = (NetController)ctx.get("serverImpl");
 		Config config = (Config)ctx.get("config");
 		PlayListProcess pprocess = (PlayListProcess)ctx.get("process");
+		pprocess.saveDecision("Abort");
 		if (config.procNum == 0) { 
 			return "BECOMECOORD";
 		}
@@ -29,6 +31,7 @@ public class ProcessAborted implements State{
 		coordinatorMessage.operation = ApplicationMessage.MessageTypes.ABORT.value();
 		serverImpl.sendMsg(0,coordinatorMessage.toString());
 		while(true) {
+			WaitUtil.waitUntilTimeout();
 			List<String> messages = serverImpl.getReceivedMsgs();
 			for(String msg : messages) {
 				ApplicationMessage message = ApplicationMessage.getApplicationMsg(msg);
