@@ -15,18 +15,21 @@ import java.util.logging.Level;
 public class ListenServer extends Thread {
 
 	public volatile boolean killSig = false;
-	final int port;
+	int port;
 	final int procNum;
 	final List<IncomingSock> socketList;
 	final Config conf;
 	final ServerSocket serverSock;
 
-	protected ListenServer(Config conf, List<IncomingSock> sockets) {
+	protected ListenServer(Config conf, List<IncomingSock> sockets,boolean isPingListener) {
 		this.conf = conf;
 		this.socketList = sockets;
 		procNum = conf.procNum;
 		port = conf.ports[procNum];
 		//System.out.printf("procNum=%d, port=%d\n",procNum,port);
+		if(isPingListener) { 
+			port += 1000;
+		}
 		try {
 			serverSock = new ServerSocket(port);
 			conf.logger.info(String.format(

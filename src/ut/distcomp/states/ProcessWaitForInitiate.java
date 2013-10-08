@@ -20,15 +20,17 @@ public class ProcessWaitForInitiate  implements State{
 		for(String msg : messages) { 
 			ApplicationMessage message = ApplicationMessage.getApplicationMsg(msg); 
 			if(message.isPlayListOperation()) {
+				System.out.println(message.toString());
 				Properties p = pprocess.getProperties();
 				p.setProperty(PlayListProcess.LogCategories.OPERATION.value(),message.toString());
 				//send back a vote
 				ApplicationMessage reply = new ApplicationMessage(config.procNum);
 				reply.operation = ApplicationMessage.MessageTypes.VOTE.value();
 				reply.vote = InstructionUtils.getVoteInstruction();
-				p.setProperty(PlayListProcess.LogCategories.DECISION.value(), reply.vote);
+				p.setProperty(PlayListProcess.LogCategories.LASTSTATE.value(), reply.vote);
 				pprocess.writeProperties(p);
 				serverImpl.sendMsg(message.sender, reply.toString());
+				System.out.println(reply.toString());
 				return "VoteSent";
 			}
 		}

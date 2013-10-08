@@ -29,8 +29,9 @@ public class CoordinatorWaitForAck implements State{
 					Properties props = pprocess.getProperties();
 					props.setProperty(PlayListProcess.LogCategories.DECISION.value(), reply.operation);	
 					pprocess.writeProperties(props);
-					serverImpl.sendMsg(sender,reply.toString());
+					count++;
 				}
+				serverImpl.sendMsg(sender,reply.toString());
 			}
 		}
 		
@@ -38,6 +39,7 @@ public class CoordinatorWaitForAck implements State{
 			if (config.procNum != 0) {
 				return "COMMIT";
 			} else {
+				ctx.put("lastDecision", "COMMIT");
 				return "TERMINAL";
 			}
 		}
@@ -47,6 +49,7 @@ public class CoordinatorWaitForAck implements State{
 		if (config.procNum != 0) { 		
 			return "ABORT";
 		} else {
+			ctx.put("lastDecision", "ABORT");
 			return "TERMINAL";
 		}
 	}

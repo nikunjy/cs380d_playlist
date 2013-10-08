@@ -21,6 +21,7 @@ public class CoordinatorInitiate implements State{
 		ApplicationMessage initMessage = InstructionUtils.getPlayListOperation(config);
 		Properties props = pprocess.getProperties(); 
 		props.setProperty(PlayListProcess.LogCategories.OPERATION.value(),initMessage.toString());
+		props.setProperty(PlayListProcess.LogCategories.DECISION.value(), "");
 		pprocess.writeProperties(props);
 		pprocess.broadCast(initMessage);
 		config.logger.info("Sent broadcast for "+initMessage.toString());

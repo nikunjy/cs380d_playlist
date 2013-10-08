@@ -34,6 +34,9 @@ public class CoordinatorTerminal implements State {
 					serverImpl.sendMsg(message.sender, reply.toString());
 				}
 			}
+			if(pprocess.getLiveSet().size() == config.numProcesses) {
+				break;
+			}
 		}
 		ApplicationMessage completeMessage = new ApplicationMessage(config.procNum); 
 		completeMessage.operation = ApplicationMessage.MessageTypes.COMPLETE.value();

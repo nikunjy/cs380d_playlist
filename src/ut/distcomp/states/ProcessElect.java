@@ -1,6 +1,7 @@
 package ut.distcomp.states;
 
 import java.util.Map;
+import java.util.Set;
 
 import ut.distcomp.application.ApplicationMessage;
 import ut.distcomp.application.PlayListProcess;
@@ -14,14 +15,18 @@ public class ProcessElect implements State{
 		Config config = (Config)ctx.get("config");
 		NetController serverImpl = (NetController)ctx.get("serverImpl");
 		PlayListProcess pprocess = (PlayListProcess)ctx.get("process");	
-		for(int i = pprocess.coordinator + 1;i < config.procNum ;i++) {  
+		Set<Integer> liveProcesses = pprocess.getLiveSet();
+		pprocess.writeLiveSet(liveProcesses);
+		
+		for(Integer liveProcess : liveProcesses) {  
 			ApplicationMessage message = new ApplicationMessage(config.procNum);
 			message.operation = ApplicationMessage.MessageTypes.ELECT.value();
-			boolean success = serverImpl.sendMsg(i, message.toString());
+			boolean success = serverImpl.sendMsg(liveProcess, message.toString());
 			if(success) {
 				config.logger.info("I am still a participant");
-				pprocess.removeFromLiveSet(i-1);
-				pprocess.coordinator = i;
+				pprocess.coordinator = liveProcess;
+				if(liveProcess == config.procNum)
+					break;
 				return "PARTICIPANT";
 			}
 		}

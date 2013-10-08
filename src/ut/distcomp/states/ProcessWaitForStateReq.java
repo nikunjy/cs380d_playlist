@@ -23,7 +23,7 @@ public class ProcessWaitForStateReq implements State{
 		System.out.println(messages);
 		for(String msg : messages) {
 			ApplicationMessage message = ApplicationMessage.getApplicationMsg(msg);
-			if(message.isStateReq()) {
+			if(message.isStateReq() && message.sender == pprocess.coordinator) {
 				ApplicationMessage reply = new ApplicationMessage(config.procNum);
 				reply.operation = ApplicationMessage.MessageTypes.STATERESP.value();
 				reply.message = lastState;

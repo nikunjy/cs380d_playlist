@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import ut.distcomp.application.ApplicationMessage;
+import ut.distcomp.application.PlayListProcess;
 import ut.distcomp.framework.Config;
 import ut.distcomp.framework.NetController;
 
@@ -20,6 +21,10 @@ public class ProcessAborted implements State{
 	public String operate() {
 		NetController serverImpl = (NetController)ctx.get("serverImpl");
 		Config config = (Config)ctx.get("config");
+		PlayListProcess pprocess = (PlayListProcess)ctx.get("process");
+		if (config.procNum == 0) { 
+			return "BECOMECOORD";
+		}
 		ApplicationMessage coordinatorMessage = new ApplicationMessage(config.procNum);
 		coordinatorMessage.operation = ApplicationMessage.MessageTypes.ABORT.value();
 		serverImpl.sendMsg(0,coordinatorMessage.toString());
@@ -32,6 +37,9 @@ public class ProcessAborted implements State{
 				} else {
 					sendAbortAll(serverImpl,config);
 				}
+			}
+			if (pprocess.getLiveSet().size() == config.numProcesses) { 
+				return "DONE";
 			}
 		}
 	}

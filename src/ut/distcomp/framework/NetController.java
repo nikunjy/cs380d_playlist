@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.logging.Level;
 
+import ut.distcomp.application.ApplicationMessage;
+
 /**
  * Public interface for managing network connections.
  * You should only need to use this and the Config class.
@@ -28,27 +30,70 @@ import java.util.logging.Level;
 public class NetController {
 	private final Config config;
 	private final List<IncomingSock> inSockets;
+	private final List<IncomingSock> pingInSockets;
 	private final OutgoingSock[] outSockets;
+	private final OutgoingSock[] pingOutSockets;
 	private final ListenServer listener;
+	private ListenServer pingListener;
 
 	public NetController(Config config) {
 		this.config = config;
 		inSockets = Collections.synchronizedList(new ArrayList<IncomingSock>());
-		listener = new ListenServer(config, inSockets);
+		pingInSockets = Collections.synchronizedList(new ArrayList<IncomingSock>());
+		listener = new ListenServer(config, inSockets,false);
+		pingListener = new ListenServer(config,pingInSockets,true);
 		outSockets = new OutgoingSock[config.numProcesses];
+		pingOutSockets = new OutgoingSock[config.numProcesses];
 		listener.start();
+		pingListener.start();
 	}
 	
 	// Establish outgoing connection to a process
-	private synchronized void initOutgoingConn(int proc) throws IOException {
-		if (outSockets[proc] != null)
+	private synchronized void initOutgoingConn(int proc,boolean isPing) throws IOException {
+		OutgoingSock sock; 
+		if (isPing) 
+			sock = pingOutSockets[proc];
+		else
+			sock = outSockets[proc]; 
+		if (sock != null)
 			throw new IllegalStateException("proc " + proc + " not null");
-		
-		outSockets[proc] = new OutgoingSock(new Socket(config.addresses[proc], config.ports[proc]));
+		int port = config.ports[proc]; 
+		if(isPing) {
+			port += 1000;	
+		}
+		if (isPing) 
+			pingOutSockets[proc] = new OutgoingSock(new Socket(config.addresses[proc], port));
+		else 
+			outSockets[proc] = new OutgoingSock(new Socket(config.addresses[proc], port));
 		config.logger.info(String.format("Server %d: Socket to %d established", 
-				config.procNum, proc));
+				port, proc));
 	}
 	
+	public synchronized boolean sendPing(int process, String msg) {
+		try {
+			if (pingOutSockets[process] == null)
+				initOutgoingConn(process,true);
+			pingOutSockets[process].sendMsg(msg);
+		} catch (IOException e) { 
+			if (pingOutSockets[process] != null) {
+				pingOutSockets[process].cleanShutdown();
+				pingOutSockets[process] = null;
+				try{
+					initOutgoingConn(process,true);
+					pingOutSockets[process].sendMsg(msg);	
+				} catch(IOException e1){
+					if (pingOutSockets[process] != null) {
+						pingOutSockets[process].cleanShutdown();
+						pingOutSockets[process] = null;
+					}
+                    return false;
+				}
+				return true;
+			}
+			return false;
+		}
+		return true;
+	}
 	/**
 	 * Send a msg to another process.  This will establish a socket if one is not created yet.
 	 * Will fail if recipient has not set up their own NetController (and its associated serverSocket)
@@ -58,16 +103,20 @@ public class NetController {
 	 * @return bool indicating success
 	 */
 	public synchronized boolean sendMsg(int process, String msg) {
+		ApplicationMessage message = ApplicationMessage.getApplicationMsg(msg); 
+		if (message.isPing()) { 
+			return sendPing(process,msg);
+		}
 		try {
 			if (outSockets[process] == null)
-				initOutgoingConn(process);
+				initOutgoingConn(process,false);
 			outSockets[process].sendMsg(msg);
 		} catch (IOException e) { 
 			if (outSockets[process] != null) {
 				outSockets[process].cleanShutdown();
 				outSockets[process] = null;
 				try{
-					initOutgoingConn(process);
+					initOutgoingConn(process,false);
                         		outSockets[process].sendMsg(msg);	
 				} catch(IOException e1){
 					if (outSockets[process] != null) {
@@ -114,11 +163,27 @@ public class NetController {
 		
 		return objs;
 	}
+	public synchronized void pingShutdown() {
+		pingListener.cleanShutdown();
+		if(pingInSockets != null) {
+		    for (IncomingSock sock : pingInSockets)
+			    if(sock != null)
+                    sock.cleanShutdown();
+        }
+	}
+	
+
+	public synchronized void openPing() {
+		pingListener = new ListenServer(config,pingInSockets,true);
+		pingListener.start();
+	}
+	
 	/**
 	 * Shuts down threads and sockets.
 	 */
 	public synchronized void shutdown() {
 		listener.cleanShutdown();
+		pingListener.cleanShutdown();
         if(inSockets != null) {
 		    for (IncomingSock sock : inSockets)
 			    if(sock != null)

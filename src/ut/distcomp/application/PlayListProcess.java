@@ -17,11 +17,11 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.TreeSet;
 
 import ut.distcomp.framework.Config;
 import ut.distcomp.framework.NetController;
@@ -30,7 +30,7 @@ import ut.distcomp.states.StateManager;
 
 public class PlayListProcess extends Thread{
 	public enum LogCategories {
-		DECISION("lastDecision"),PLAYLIST("playList"),LIVEADDRESS("liveAddress"),LIVEPORTS("livePorts"),OPERATION("operation"),LASTSTATE("lastState");
+		DECISION("lastDecision"),PLAYLIST("playList"),LIVESET("liveSet"),OPERATION("operation"),LASTSTATE("lastState");
 		public String category;
 		public String value() { 
 			return category;
@@ -47,14 +47,18 @@ public class PlayListProcess extends Thread{
 	private volatile boolean isCoordinator;
 	public Set<Integer> liveSet;
 	public int coordinator;
+	public boolean isRecovering;
 	public void setIsCoordinator(boolean isCoordinator) { 
 		this.isCoordinator = isCoordinator;
 	}
 	Properties props;
 	private List<String> playList;
 	public PlayListProcess(Config config) {
-		liveSet = new HashSet<Integer>();
+		liveSet = new TreeSet<Integer>();
+		serverImpl = new NetController(config);
+		playList = new ArrayList<String>();
 		this.config = config;
+		isRecovering = false;
 		int processId = config.procNum;
 		dtLog = "/tmp/dt_playlist/"+processId;
 		props = new Properties();
@@ -69,12 +73,16 @@ public class PlayListProcess extends Thread{
 		}
 		File f = new File(dtLog);
 		if(f.exists()) { 
-
+			recovery();
 		}else {
 			try {
 				writer = new PrintWriter(new BufferedWriter(new FileWriter(dtLog,false)));
+				writer.flush(); 
+				writer.close();
 				OutputStream out = new FileOutputStream(f);
 				props.store(out, "First Time");
+				out.flush();
+				out.close();
 			} catch (IOException ex){
 				config.logger.info("Exception"+ex);
 			} finally {
@@ -88,13 +96,12 @@ public class PlayListProcess extends Thread{
 		} catch (Exception e) { 
 			config.logger.info("Exception"+e);
 		}
-		serverImpl = new NetController(config);
-		playList = new ArrayList<String>();
+
 	}
 	public Properties getProperties() {
 		Properties prop = new Properties();
 		try {
-		prop.load(new FileInputStream(dtLog));
+			prop.load(new FileInputStream(dtLog));
 		} catch (Exception e) { 
 			config.logger.info(e.toString());
 		}
@@ -104,12 +111,42 @@ public class PlayListProcess extends Thread{
 		for (int i=0;i<=p;i++)
 			liveSet.remove(i); 
 	}
+	public void writeLiveSet(Set<Integer> liveSet) {
+		this.liveSet = liveSet; 
+		Properties props = getProperties();
+		props.setProperty(PlayListProcess.LogCategories.LIVESET.value(), serializeLiveSet(liveSet));
+		writeProperties(props);
+	}
+	public String serializeLiveSet(Set<Integer> liveSet) { 
+		String ret = "";
+		int count = 0;
+		for(Integer liveProcs : liveSet) { 
+			ret+=liveProcs;
+			if (count != liveSet.size()-1) {
+				ret +=" ";
+			}
+			count++;
+		}
+		return ret;
+	}
+	public Set<Integer> getUpSetFromLog(Properties props){
+		String upsetLog = props.getProperty(PlayListProcess.LogCategories.LIVESET.value());
+		String[] procs = upsetLog.split(" ");
+		Set<Integer> liveSet = new HashSet<Integer>();
+		for(String proc : procs) {
+			if(proc.equals("") || proc == null)
+				continue;
+			liveSet.add(Integer.parseInt(proc));
+		}
+		return liveSet;
+	}
+
 	public List<String> getPlayListFromLog() { 
 		Properties prop = new Properties();
 		try {
-		prop.load(new FileInputStream(dtLog));
-		String[] playListArray = prop.getProperty(LogCategories.PLAYLIST.value()).split(",");
-		playList = Arrays.asList(playListArray);
+			prop.load(new FileInputStream(dtLog));
+			String[] playListArray = prop.getProperty(LogCategories.PLAYLIST.value()).split(",");
+			playList = Arrays.asList(playListArray);
 		} catch (Exception e) { 
 			config.logger.info(e.toString());
 		}
@@ -121,9 +158,9 @@ public class PlayListProcess extends Thread{
 	public Set<Integer> getLiveSet() { 
 		ApplicationMessage pingMessage = new ApplicationMessage(config.procNum); 
 		pingMessage.operation = ApplicationMessage.MessageTypes.PING.value();
-		Set<Integer> liveSet = new HashSet<Integer>();
+		Set<Integer> liveSet = new TreeSet<Integer>();
 		for (int i = 0 ;i < config.addresses.length; i++) { 
-			boolean success =serverImpl.sendMsg(i, pingMessage.toString());
+			boolean success = serverImpl.sendMsg(i, pingMessage.toString());
 			if (success)
 				liveSet.add(i);
 		}
@@ -142,15 +179,17 @@ public class PlayListProcess extends Thread{
 	}
 	public void writeProperties(Properties props) {
 		try {
-		File f = new File(dtLog);
-		OutputStream out = new FileOutputStream(f);
-		Date updateTime = new Date();
-		props.store(out, "Update at "+updateTime);
+			File f = new File(dtLog);
+			OutputStream out = new FileOutputStream(f);
+			Date updateTime = new Date();
+			props.store(out, "Update at "+updateTime);
+			out.flush();
+			out.close();
 		} catch (Exception e) { 
 			//we don't care. DT log always works 
 			config.logger.info(e.toString());
 		}
-		
+
 	}
 	public boolean broadCast(ApplicationMessage message) {
 		boolean success = true;
@@ -162,12 +201,56 @@ public class PlayListProcess extends Thread{
 			config.logger.info("Sent broadcast"+message+"\n");
 		return success;
 	}
-	
-	public void recovery() { 
 
-		//recovery code goes here. 
-	}
-	public void init() throws Exception{		
+	public void recovery() {
+		serverImpl.pingShutdown();
+		
+		isRecovering = true;
+		Map<String,Object> context = new HashMap<String,Object>();
+		context.put("config",config);
+		context.put("serverImpl",serverImpl);
+		context.put("process", this);
+		context.put("lastState", null);
+		Properties props = new Properties(); 
+		try {
+			props.load(new FileInputStream(dtLog));
+			this.liveSet = getUpSetFromLog(props);
+			String lastDecision = props.getProperty(PlayListProcess.LogCategories.DECISION.value());
+			String lastState = props.getProperty(PlayListProcess.LogCategories.LASTSTATE.value());
+			if(lastDecision.equalsIgnoreCase("Abort")) {
+				serverImpl.openPing();
+				if(config.procNum == 0) {
+					context.put("lastDecision", "ABORT");
+					context.put("decidedState", "coordinatorTerminal");
+				} else {
+					context.put("decidedState", "processAborted");
+				}
+			}else if(lastDecision.equalsIgnoreCase("Commit")) {
+				serverImpl.openPing();
+				if(config.procNum == 0) {
+					context.put("lastDecision", "COMMIT");
+					context.put("decidedState", "coordinatorTerminal");
+				} else {
+					context.put("decidedState", "processCommitted");
+				}
+			}else { 
+				context.put("decidedState","askOtherProcesses");
+				//last state can Pre Commit or yes
+				if (lastState.equalsIgnoreCase("precommit")) { 
+					lastState = "processWaitForDecision";
+				}
+				if(lastState.equalsIgnoreCase("yes")) {
+					lastState = "processWaitForPreCommit";
+				}
+				context.put("lastState",lastState);
+			}
+
+			StateManager manager = new StateManager();  
+			manager.startProcessWithRecovery(context);
+		} catch(Exception e) { 
+			e.printStackTrace();
+			config.logger.info("Unexpected problem");
+		}
 
 	}
 	public void run() {
@@ -194,7 +277,7 @@ public class PlayListProcess extends Thread{
 				e.printStackTrace();
 				config.logger.info("Unexpected problem"+e);
 			}
-			
+
 		}
 
 	}

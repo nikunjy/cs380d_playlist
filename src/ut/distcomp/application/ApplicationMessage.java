@@ -1,5 +1,8 @@
 package ut.distcomp.application;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import com.google.gson.Gson;
 
 public class ApplicationMessage {
@@ -7,7 +10,7 @@ public class ApplicationMessage {
 	public enum MessageTypes {
 		ADD("Add"),DELETE("Delete"),EDIT("Edit"),ELECT("NewLeader"),VOTE("Vote"),COMMIT("Commit"),ABORT("Abort"),
 		PRECOMMIT("precommit"),ACK("ack"),STATEREQ("stateReq"),STATERESP("stateResp"),COMPLETE("transactionComplete"),
-		PING("ping");
+		RSTATEREQ("recoverStateReq"),UPSET("upSet"),PING("ping");
 		public String message;
 		public String value() { 
 			return message;
@@ -38,6 +41,9 @@ public class ApplicationMessage {
 	}
 	public boolean isNewCoordinatorMessage() { 
 		return operation.equalsIgnoreCase("NewLeader");
+	}
+	public boolean isPing() { 
+		return operation.equalsIgnoreCase("Ping");
 	}
 	public boolean isCommit() { 
 		return operation.equalsIgnoreCase("Commit");
@@ -82,6 +88,34 @@ public class ApplicationMessage {
 	}
 	public boolean isPlayListOperation() { 
 		return (isAdd() || isEdit() || isDelete());
+	}
+	public boolean isUpSetMessage() { 
+		return operation.equalsIgnoreCase(ApplicationMessage.MessageTypes.UPSET.value());
+	}
+	public Set<Integer> getLiveSetFromMessage(String message) { 
+		String[] procs = message.split(" ");
+		Set<Integer> liveSet = new HashSet<Integer>();
+		for(String proc : procs) {
+			if(proc.equals("") || proc == null)
+				continue;
+			liveSet.add(Integer.parseInt(proc));
+		}
+		return liveSet;
+	}
+	public String serializeLiveSet(Set<Integer> liveSet) { 
+		String ret = "";
+		int count = 0;
+		for(Integer liveProcs : liveSet) { 
+			ret+=liveProcs;
+			if (count != liveSet.size()-1) {
+				ret +=" ";
+			}
+			count++;
+		}
+		return ret;
+	}
+	public boolean isRStateReq() { 
+		return operation.equalsIgnoreCase(ApplicationMessage.MessageTypes.RSTATEREQ.value()); 
 	}
 	public String getVote() { 
 		return vote;
