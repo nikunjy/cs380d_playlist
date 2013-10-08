@@ -17,6 +17,7 @@ public class ProcessWaitForStateReq implements State{
 		Config config = (Config)ctx.get("config");
 		NetController serverImpl = (NetController)ctx.get("serverImpl");
 		String lastState = (String)ctx.get("lastState");
+		PlayListProcess pprocess = (PlayListProcess)ctx.get("process");
 		WaitUtil.waitUntilTimeout();
 		List<String> messages = serverImpl.getReceivedMsgs();
 		System.out.println(messages);
@@ -28,12 +29,15 @@ public class ProcessWaitForStateReq implements State{
 				reply.message = lastState;
 				config.logger.info("Sending last state "+reply.message+" to new coordinator");
 				serverImpl.sendMsg(message.sender, reply.toString());
-				if (lastState.equalsIgnoreCase("processWaitForDecision"))  {
-					ctx.put("lastState","processWaitForPreCommit");
-				}
 				return "STATE-SENT";
 			}
 		}
+		ApplicationMessage pingMessage = new ApplicationMessage(config.procNum);
+		pingMessage.operation = ApplicationMessage.MessageTypes.PING.value(); 
+		boolean isSuccess = serverImpl.sendMsg(pprocess.coordinator, pingMessage.toString());
+		if (isSuccess) { 
+			return operate();
+		} 
 		return "REELECT";
 	}
 	public String getName() { 

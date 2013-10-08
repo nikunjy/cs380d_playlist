@@ -54,6 +54,12 @@ public class ProcessWaitForPreCommit implements State{
 				}
 			}
 		}
+		ApplicationMessage pingMessage = new ApplicationMessage(config.procNum);
+		pingMessage.operation = ApplicationMessage.MessageTypes.PING.value(); 
+		boolean isSuccess = serverImpl.sendMsg(pprocess.coordinator, pingMessage.toString());
+		if (isSuccess) { 
+			return operate();
+		} 
 		return "REELECT";
 	}
 	public String getName() { 

@@ -1,12 +1,11 @@
 package ut.distcomp.states;
 
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import ut.distcomp.application.ApplicationMessage;
-import ut.distcomp.application.InstructionUtils;
 import ut.distcomp.application.PlayListProcess;
 import ut.distcomp.application.WaitUtil;
 import ut.distcomp.framework.Config;
@@ -23,35 +22,32 @@ public class CoordinatorFirstPhaseWait implements State {
 		Config config = (Config)ctx.get("config");
 		NetController serverImpl = (NetController)ctx.get("serverImpl");
 		PlayListProcess pprocess = (PlayListProcess)ctx.get("process");
-		Integer[] votes = new Integer[config.addresses.length];
-		for(int i=0;i<votes.length;i++)
-			votes[i] = -1;
-		votes[config.procNum] = 1;
-		int count = 0;
-		WaitUtil.waitUntilTimeout(500);
-		List<String> messages = serverImpl.getReceivedMsgs();
-		System.out.println(messages);
-		long now = (new Date()).getTime();
-		for(String msg : messages) { 
-			ApplicationMessage message = ApplicationMessage.getApplicationMsg(msg);
-			if(message.isVote()) {
-				if(message.getVote().equalsIgnoreCase("Yes")) {
-					votes[message.sender] = 1;
-				} else {
-					votes[message.sender] = 0;
+		
+		int yesVotes = 1;
+		int totalVotes = 1;
+		while (true) {
+			WaitUtil.waitUntilTimeout(500);
+			List<String> messages = serverImpl.getReceivedMsgs();
+			for(String msg : messages) { 
+				ApplicationMessage message = ApplicationMessage.getApplicationMsg(msg);
+				if(message.isVote()) {
+					if(message.getVote().equalsIgnoreCase("Yes")) {
+						yesVotes++;
+					} 
+					totalVotes++;
 				}
 			}
+			Set<Integer> liveSet = pprocess.getLiveSet();
+			if (liveSet.size() == totalVotes) {
+				break;
+			}
 		}
-		serverImpl.purgeMessages();
-		for(int i=0;i<votes.length;i++) { 
-			count+=votes[i];
-		}
-		if(count == votes.length) {
+		if (yesVotes == config.numProcesses) {
 			//Send pre commit to all
 			config.logger.info("Sending pre commit");
 			Properties p = pprocess.getProperties();
 			p.setProperty(PlayListProcess.LogCategories.LASTSTATE.value(),
-					"precommit");
+					"Precommit");
 			pprocess.writeProperties(p);
 			ApplicationMessage reply = new ApplicationMessage(config.procNum);
 			reply.operation = ApplicationMessage.MessageTypes.PRECOMMIT.value();
@@ -61,22 +57,17 @@ public class CoordinatorFirstPhaseWait implements State {
 			config.logger.info("Going to send an abort");
 			Properties p = pprocess.getProperties();
 			p.setProperty(PlayListProcess.LogCategories.LASTSTATE.value(),
-					"firstphasewait");
+					"Firstphasewait");
 			p.setProperty(PlayListProcess.LogCategories.DECISION.value(),
-					"abort");
+					"Abort");
 			pprocess.writeProperties(p);
-
-			for (int i = 0 ;i<votes.length;i++) { 
-				if( i !=config.procNum && votes[i] == 1) {
-					ApplicationMessage reply = new ApplicationMessage(config.procNum); 
-					reply.operation = ApplicationMessage.MessageTypes.ABORT.value();
-					serverImpl.sendMsg(i,reply.toString());
-				}
-			}
+			
+			ApplicationMessage reply = new ApplicationMessage(config.procNum); 
+			reply.operation = ApplicationMessage.MessageTypes.ABORT.value();
+			pprocess.broadCast(reply);
+			ctx.put("lastDecision", "ABORT");
 			return "ABORT";
 		}
-
-
 	}
 	public String getName() { 
 		return "coordinatorFirstPhaseWait";

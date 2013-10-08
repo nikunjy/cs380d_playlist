@@ -31,20 +31,6 @@ public class ProcessWaitForInitiate  implements State{
 				serverImpl.sendMsg(message.sender, reply.toString());
 				return "VoteSent";
 			}
-			if(message.isNewCoordinatorMessage()) {
-				//I'm the new Coordinator, get my last state
-				String lastState = (String)ctx.get("lastState");
-				ApplicationMessage reply = new ApplicationMessage(config.procNum);
-				if(lastState.equalsIgnoreCase("processAborted"))
-					reply.operation = ApplicationMessage.MessageTypes.ABORT
-						.value();
-				else
-					reply.operation = ApplicationMessage.MessageTypes.COMMIT
-						.value();
-				for(int i=0;i<config.numProcesses;i++)
-					serverImpl.sendMsg(i,reply.toString());
-				return "NOOP";
-			}
 		}
 		return "NOOP";
 	}

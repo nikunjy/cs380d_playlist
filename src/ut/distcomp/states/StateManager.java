@@ -15,45 +15,47 @@ public class StateManager {
 	private static List<TransitionWrapper> processDFA = new ArrayList<TransitionWrapper>();
 	
 	static {
+		allStates.add(new CoordinatorAskForStateReq());
 		allStates.add(new CoordinatorFirstPhaseWait());
 		allStates.add(new CoordinatorInitiate());
+		allStates.add(new CoordinatorTerminal());
 		allStates.add(new CoordinatorWaitForAck());
-		allStates.add(new CoordinatorAskForStateReq());
 		allStates.add(new CoordinatorWaitForState());
+		allStates.add(new ProcessAborted());
+		allStates.add(new ProcessCommitted());
+		allStates.add(new ProcessElect());
 		allStates.add(new ProcessWaitForDecision());
 		allStates.add(new ProcessWaitForInitiate());  
 		allStates.add(new ProcessWaitForPreCommit());
-		allStates.add(new ProcessCommitted());
-		allStates.add(new ProcessAborted());
-		allStates.add(new ProcessElect());
 		allStates.add(new ProcessWaitForStateReq());
 		
 		for(State state : allStates) {
 			stateNameMap.put(state.getName(), state);
 		}
-		coordinatorDFA.add(new TransitionWrapper("ABORT","coordinatorInitiate","coordinatorInitiate"));
+		coordinatorDFA.add(new TransitionWrapper("ABORT","coordinatorInitiate","coordinatorTerminal"));
 		coordinatorDFA.add(new TransitionWrapper("SUCCESS","coordinatorInitiate","coordinatorFirstPhaseWait"));
 		coordinatorDFA.add(new TransitionWrapper("ABORT","coordinatorFirstPhaseWait","coordinatorInitiate"));
 		coordinatorDFA.add(new TransitionWrapper("PRECOMMIT","coordinatorFirstPhaseWait","coordinatorWaitForAck"));
-		coordinatorDFA.add(new TransitionWrapper("SUCCESS","coordinatorWaitForAck","coordinatorInitiate"));
-		coordinatorDFA.add(new TransitionWrapper("ABORT","coordinatorWaitForAck","coordinatorInitiate"));
-		coordinatorDFA.add(new TransitionWrapper("ERROR","coordinatorWaitForAck","coordinatorInitiate"));
-		
+		coordinatorDFA.add(new TransitionWrapper("TERMINAL","coordinatorWaitForAck","coordinatorTerminal"));
+		coordinatorDFA.add(new TransitionWrapper("COMMIT","coordinatorWaitForAck","processCommited"));
+		coordinatorDFA.add(new TransitionWrapper("ABORT","coordinatorWaitForAck","processAborted"));
+		coordinatorDFA.add(new TransitionWrapper("SUCCESS","coordinatorTerminal","coordinatorInitiate"));
 		
 		processDFA.add(new TransitionWrapper("NOOP","processWaitForInitiate","processWaitForInitiate"));
 		processDFA.add(new TransitionWrapper("VoteSent","processWaitForInitiate","processWaitForPreCommit"));
 		processDFA.add(new TransitionWrapper("ERROR","processWaitForInitiate","processWaitForInitiate"));
 		processDFA.add(new TransitionWrapper("SUCCESS","processWaitForPreCommit","processWaitForDecision"));
 		processDFA.add(new TransitionWrapper("ABORT","processWaitForPreCommit","processAborted"));
+		processDFA.add(new TransitionWrapper("REELECT","processWaitForPreCommit","processElect"));
 		processDFA.add(new TransitionWrapper("DONE","processAborted","processWaitForInitiate"));
 		processDFA.add(new TransitionWrapper("SUCCESS","processWaitForDecision","processCommitted"));
 		processDFA.add(new TransitionWrapper("DONE","processCommitted", "processWaitForInitiate"));
-		processDFA.add(new TransitionWrapper("REELECT","processWaitForPreCommit","processElect"));
 		processDFA.add(new TransitionWrapper("REELECT","processWaitForDecision","processElect"));
 		processDFA.add(new TransitionWrapper("PARTICIPANT","processElect","processWaitForStateReq"));
 		processDFA.add(new TransitionWrapper("ELECTED","processElect","coordinatorAskForStateReq"));
 		processDFA.add(new TransitionWrapper("DONE","coordinatorAskForStateReq","coordinatorWaitForState"));
-		processDFA.add(new TransitionWrapper("DONE","coordinatorWaitForState","coordinatorInitiate"));
+		processDFA.add(new TransitionWrapper("ABORT","coordinatorWaitForState","processAborted"));
+		processDFA.add(new TransitionWrapper("COMMIT","coordinatorWaitForState","processCommited"));
 		processDFA.add(new TransitionWrapper("PRECOMMIT", "coordinatorWaitForState","coordinatorWaitForAck"));
 	}
 	State makeTransition(List<TransitionWrapper> dfa,State currentState,String transition) {

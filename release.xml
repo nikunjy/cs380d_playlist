@@ -1,21 +1,18 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<project default="create_run_jar" name="Create Runnable Jar for Project cs380d_playlist with Jar-in-Jar Loader">
+<project default="create_run_jar" name="Create Runnable Jar for Project cs380d_playlist">
     <!--this file was created by Eclipse Runnable JAR Export Wizard-->
     <!--ANT 1.7 is required                                        -->
     <target name="create_run_jar">
-        <jar destfile="/v/filer4b/v20q001/nikunj/git/run.jar">
+        <jar destfile="/h2/bharat/git/Run.jar" filesetmanifest="mergewithoutmain">
             <manifest>
-                <attribute name="Main-Class" value="org.eclipse.jdt.internal.jarinjarloader.JarRsrcLoader"/>
-                <attribute name="Rsrc-Main-Class" value="ut.distcomp.application.ApplicationInitializer"/>
+                <attribute name="Main-Class" value="ut.distcomp.application.ApplicationInitializer"/>
                 <attribute name="Class-Path" value="."/>
-                <attribute name="Rsrc-Class-Path" value="./ NetFramework.jar gson-2.2.4.jar reflections-0.9.9-RC1-uberjar.jar guava-15.0.jar"/>
             </manifest>
-            <zipfileset src="jar-in-jar-loader.zip"/>
-            <fileset dir="/v/filer4b/v20q001/nikunj/git/cs380d_playlist/bin"/>
-            <zipfileset dir="/v/filer4b/v20q001/nikunj/git/cs380d_playlist/lib" includes="NetFramework.jar"/>
-            <zipfileset dir="/v/filer4b/v20q001/nikunj/git/cs380d_playlist/lib" includes="gson-2.2.4.jar"/>
-            <zipfileset dir="/v/filer4b/v20q001/nikunj/git/cs380d_playlist/lib" includes="reflections-0.9.9-RC1-uberjar.jar"/>
-            <zipfileset dir="/v/filer4b/v20q001/nikunj/git/cs380d_playlist/lib" includes="guava-15.0.jar"/>
+            <fileset dir="/h2/bharat/git/cs380d_playlist/bin"/>
+            <zipfileset excludes="META-INF/*.SF" src="/h2/bharat/git/cs380d_playlist/lib/NetFramework.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/h2/bharat/git/cs380d_playlist/lib/gson-2.2.4.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/h2/bharat/git/cs380d_playlist/lib/reflections-0.9.9-RC1-uberjar.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/h2/bharat/git/cs380d_playlist/lib/guava-15.0.jar"/>
         </jar>
     </target>
 </project>

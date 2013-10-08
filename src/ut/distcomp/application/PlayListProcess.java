@@ -16,9 +16,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import ut.distcomp.framework.Config;
 import ut.distcomp.framework.NetController;
@@ -42,6 +45,7 @@ public class PlayListProcess extends Thread{
 	private Reader reader;
 	private Config config;
 	private volatile boolean isCoordinator;
+	public Set<Integer> liveSet;
 	public int coordinator;
 	public void setIsCoordinator(boolean isCoordinator) { 
 		this.isCoordinator = isCoordinator;
@@ -49,6 +53,7 @@ public class PlayListProcess extends Thread{
 	Properties props;
 	private List<String> playList;
 	public PlayListProcess(Config config) {
+		liveSet = new HashSet<Integer>();
 		this.config = config;
 		int processId = config.procNum;
 		dtLog = "/tmp/dt_playlist/"+processId;
@@ -94,7 +99,10 @@ public class PlayListProcess extends Thread{
 			config.logger.info(e.toString());
 		}
 		return prop;
-		
+	}
+	public void removeFromLiveSet(int p) { 
+		for (int i=0;i<=p;i++)
+			liveSet.remove(i); 
 	}
 	public List<String> getPlayListFromLog() { 
 		Properties prop = new Properties();
@@ -106,6 +114,20 @@ public class PlayListProcess extends Thread{
 			config.logger.info(e.toString());
 		}
 		return playList;
+	}
+	public void updateLiveSet() { 
+		this.liveSet = getLiveSet();
+	}
+	public Set<Integer> getLiveSet() { 
+		ApplicationMessage pingMessage = new ApplicationMessage(config.procNum); 
+		pingMessage.operation = ApplicationMessage.MessageTypes.PING.value();
+		Set<Integer> liveSet = new HashSet<Integer>();
+		for (int i = 0 ;i < config.addresses.length; i++) { 
+			boolean success =serverImpl.sendMsg(i, pingMessage.toString());
+			if (success)
+				liveSet.add(i);
+		}
+		return liveSet;
 	}
 	private String serializePlayList() { 
 		String serializedList = "";
@@ -164,6 +186,7 @@ public class PlayListProcess extends Thread{
 				config.logger.info("Unexpected problem");
 			}
 		} else {
+			this.coordinator = 0;
 			StateManager manager = new StateManager(); 
 			try {
 				manager.startProcess(context);

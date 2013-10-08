@@ -7,16 +7,22 @@ import ut.distcomp.framework.Config;
 
 public class InstructionUtils {
 	public static String getVoteInstruction() { 
-		return "Yes";
+		try {
+			BufferedReader bi = new BufferedReader(new InputStreamReader(System.in));
+			String s = bi.readLine();
+			return s;
+		} catch (Exception e) { 
+			return "Yes";
+		}
 	}
 	public static ApplicationMessage getPlayListOperation(Config config) {
 		BufferedReader bi = new BufferedReader(new InputStreamReader(System.in));
 		String line;
 		try {
-		while((line = bi.readLine()) !=null && !line.equalsIgnoreCase("GO")) { 
-		}
+			while((line = bi.readLine()) !=null && !line.equalsIgnoreCase("GO")) { 
+			}
 		}catch(Exception e) { 
-			
+
 		}
 		ApplicationMessage message = new ApplicationMessage(config.procNum); 
 		int seed = (int)(Math.random() * 100);

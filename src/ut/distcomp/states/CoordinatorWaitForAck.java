@@ -18,29 +18,37 @@ public class CoordinatorWaitForAck implements State{
 		PlayListProcess pprocess = (PlayListProcess)ctx.get("process");
 		WaitUtil.waitUntilTimeout();
 		List<String> messages = serverImpl.getReceivedMsgs();
+		int count = 0;
 		for(String msg : messages) { 
 			ApplicationMessage message = ApplicationMessage.getApplicationMsg(msg); 
 			if(message.isAck()) { 
-				Properties props = pprocess.getProperties();
 				int sender = message.sender;
 				ApplicationMessage reply = new ApplicationMessage(config.procNum);
 				reply.operation = ApplicationMessage.MessageTypes.COMMIT.value();
-				props.setProperty(PlayListProcess.LogCategories.DECISION.value(), reply.operation);	
-				//TODO write this once
-				pprocess.writeProperties(props);
-				serverImpl.sendMsg(sender,reply.toString());
+				if (count == 0) {
+					Properties props = pprocess.getProperties();
+					props.setProperty(PlayListProcess.LogCategories.DECISION.value(), reply.operation);	
+					pprocess.writeProperties(props);
+					serverImpl.sendMsg(sender,reply.toString());
+				}
 			}
 		}
 		
-		if(messages.size()>0) { 
-			serverImpl.purgeMessages();
-			return "SUCCESS";
+		if(messages.size()>0) {
+			if (config.procNum != 0) {
+				return "COMMIT";
+			} else {
+				return "TERMINAL";
+			}
 		}
 		ApplicationMessage reply = new ApplicationMessage(config.procNum); 
 		reply.operation = ApplicationMessage.MessageTypes.ABORT.value();
 		pprocess.broadCast(reply);
-		serverImpl.purgeMessages();
-		return "ABORT";		
+		if (config.procNum != 0) { 		
+			return "ABORT";
+		} else {
+			return "TERMINAL";
+		}
 	}
 	public String getName() { 
 		return "coordinatorWaitForAck";

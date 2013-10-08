@@ -6,7 +6,8 @@ public class ApplicationMessage {
 	
 	public enum MessageTypes {
 		ADD("Add"),DELETE("Delete"),EDIT("Edit"),ELECT("NewLeader"),VOTE("Vote"),COMMIT("Commit"),ABORT("Abort"),
-		PRECOMMIT("precommit"),ACK("ack"),STATEREQ("stateReq"),STATERESP("stateResp");
+		PRECOMMIT("precommit"),ACK("ack"),STATEREQ("stateReq"),STATERESP("stateResp"),COMPLETE("transactionComplete"),
+		PING("ping");
 		public String message;
 		public String value() { 
 			return message;
@@ -87,6 +88,9 @@ public class ApplicationMessage {
 	}
 	public boolean isVote() { 
 		return operation.equalsIgnoreCase(ApplicationMessage.MessageTypes.VOTE.value());
+	}
+	public boolean isCompleteMessage() { 
+		return operation.equalsIgnoreCase(ApplicationMessage.MessageTypes.COMPLETE.value());
 	}
 	public String toString() { 
 		Gson g = new Gson(); 
